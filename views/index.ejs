@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ED Notifs - Panel</title>
+</head>
+<body>
+    <header>
+        <h1>ED Notifs - Panel</h1>
+    </header>
+    <div class="content">
+        <p id="welcome">Salut <%= acc.prenom.charAt(0) + acc.prenom.substring(1).toLowerCase() %></p>
+        <p class="latest">
+            <h2 class="text">Les dernieres notes :</h2>
+            <ul>
+                <% notes.forEach(function(n) { %>
+                    <li>
+                        <strong><%= n.nom %> :</strong>
+                        <p class="matiere">Matiere : <%= n.matiere %></p>
+                        <div class="notes">
+                            <p class="notes">Note : <%= n.note %>/<%= n.noteSur %></p>
+                            <p class="moyennClasse">Moyenne de la classe : <%= n.MClasse %>/<%= n.noteSur %>  </p>
+                        </div>
+                    </li>
+                <% }); %>
+            </ul>
+        </p>
+        <button class="update" onclick="update()">Mettre a jour les notes (Action manuelle)</button>
+    </div>
+    <script>
+        function update() {
+            fetch("/update", {
+                method: "POST",
+                headers: {'Content-Type': 'application/json'}, 
+                body: null
+                }).then(res => {
+                    location.reload()
+                });
+            }
+    </script>
+</body>
+</html>

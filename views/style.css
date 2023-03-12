@@ -1,0 +1,23 @@
+.title{
+    font-family: 'Cairo', sans-serif;
+    text-align: center;
+}
+
+.notesDiv{
+    display: flex;
+    justify-content: center;
+    border: 4mm ridge rgba(17, 211, 201, 0.6);
+    border-radius: 2.5vh;
+}
+
+*{
+    background-color: rgb(84, 48, 182);
+    color: bisque;
+}
+.not{
+    border: 0.1rem solid;
+    margin: 1vh;
+    box-sizing: content-box;
+    width: 100%;
+    list-style: none;
+}
