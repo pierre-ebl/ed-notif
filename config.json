@@ -1,8 +1,9 @@
+
 {
-    "username": "",
-    "pass": "",
+    "username": "TODO",
+    "pass": "TODO",
     "pushover": {
         "token": "",
-        "user": ""
+        "user": "nik0"
     }
 }
