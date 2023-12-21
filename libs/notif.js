@@ -7,7 +7,7 @@ module.exports = {
 
         const options = {
             method: 'POST',
-            url: 'https://ntfy.sh/ed-notif',
+            url: 'https://ntfy.sh/TOPIC',
             headers: {
                 'Content-Type': 'text/plain',
                 Title: title,

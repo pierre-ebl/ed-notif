@@ -24,10 +24,10 @@ A software for get notifications when you had a new note in [Ecole Directe](http
 ```
 npm install
 ```
-* You need to edit config.json (Put your EcoleDirecte login informations and your [Pushover](https://pushover.net) token and id).
+* You need to edit config.json (Put your EcoleDirecte login informations and edit libs/notif.js to add your topic to https://ntfy.sh to get a notification   ).
 * Then run the index.js and it's good !
 ```
-node index.js
+start the script CheckNote.sh 
 ```
 
 ## Help
