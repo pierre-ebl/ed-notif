@@ -8,202 +8,202 @@ const { isDeepStrictEqual } = require('util');
 const { log } = require('console');
 const port = 80;
 
-let token = ""
-let account = ""
 let dir = "./db"
+let isDebugMode = false;
 
 start()
 
-async function getDataFromUrl(url, token, data)
-{
-        const response = await fetch(url, {
-                "headers": {
-                        "accept": "application/json, text/plain, */*",
-                        "accept-language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-                        "content-type": "application/x-www-form-urlencoded",
-                        "sec-ch-ua": "\"Google Chrome\";v=\"111\", \"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"111\"",
-                        "sec-ch-ua-mobile": "?0",
-                        "sec-ch-ua-platform": "\"Windows\"",
-                        "sec-fetch-dest": "empty",
-                        "sec-fetch-mode": "cors",
-                        "sec-fetch-site": "same-site",
-                        "x-token": token,
-                        "Referer": "https://www.ecoledirecte.com/",
-                        "Referrer-Policy": "strict-origin-when-cross-origin",
-                        //"User-Agent":"EDMOBILE"
-                },
-                "body": data,
-                "method": "POST"
-        });
+function Debug(message) {
+    if (isDebugMode) {
+        console.log(message);
+    }
+}
 
-        if (!response.ok)
-        {
-                const message = "Erreur login ${response.status}";
-                console.log(message);
-                throw new Error(message);
-        }
-        const body = await response.json();
-        return body;
+async function getDataFromUrl(url, token, data) {
+    const headers = {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "content-type": "application/x-www-form-urlencoded",
+        "sec-ch-ua": "\"Google Chrome\";v=\"111\", \"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"111\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"Windows\"",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "x-token": token,
+        "Referer": "https://www.ecoledirecte.com/",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        // "User-Agent": "EDMOBILE"
+    };
 
+    const options = {
+        method: "POST",
+        headers: headers,
+        body: data
+    };
+
+    const response = await fetch(url, options);
+
+    if (!response.ok) {
+        const message = `Erreur login ${response.status}`;
+        console.log(message);
+        throw new Error(message);
+    }
+
+    return await response.json();
 }
 
 async function start() {
         //notif.send('Ecole Directe Notifs', "On demarre", '')
-//      try
+      try
         {
-                await getToken(config.username, config.pass)
-                await checkIfNew()
+                account = await getToken(config.username, config.pass)
+                await checkIfNew(account[0], account[1])
         }
-//      catch (error) {
-//              console.error("Exception !!!!" + error)
-//      }
+      catch (error) {
+              console.error("Exception !!!!" + error)
+      }
 }
 
 async function getToken(username, password) {
-        var encodedUser = username.replace(/[\u00A0-\u9999<>\&]/gim, function (i) {
-                return '&#' + i.charCodeAt(0) + ';';
-        });
+    let account = {};
+    let token = {};
+    const encodedUser = encodeString(username);
+    const encodedPass = encodeString(password);
 
-        var encodedPass = password.replace(/[\u00A0-\u9999<>\&]/gim, function (i) {
-                return '&#' + i.charCodeAt(0) + ';';
-        });
+    const loginUrl = "https://api.ecoledirecte.com/v3/login.awp?v=4.53.4";
+    const loginData = `data={
+        "uuid": "",
+        "identifiant": "${encodedUser}",
+        "motdepasse": "${encodedPass}",
+        "isReLogin": false
+    }`;
 
-        const body = await getDataFromUrl("https://api.ecoledirecte.com/v3/login.awp?v=4.53.4", "",
-                "data={\n    \"uuid\": \"\",\n    \"identifiant\": \"" + encodedUser + "\",\n    \"motdepasse\": \"" +
-encodedPass + "\",\n    \"isReLogin\": false\n}" )
+    const loginResponse = await getDataFromUrl(loginUrl, "", loginData);
+    const code = loginResponse['code'];
+    token = loginResponse['token'];
+    console.log("Standard login: " + code + " token=" + token);
 
-        token = body['token'];
-        console.log("Standard login:" + body['code']);
+    if (code === 200) {
+        account = loginResponse['data']['accounts']['0']['profile']['eleves']['0'];
+    } else if (code === 250) {
+        const doubleAuthUrl = "https://api.ecoledirecte.com/v3/connexion/doubleauth.awp?verbe=get&v=4.53.4";
+        const doubleAuthData = "data={}";
 
-        if (body['code'] == 200)
-        {
-                //console.log(body);
-                account = body['data']['accounts']['0']['profile']['eleves']['0'];
-                //console.log(account);
+        const doubleAuthResponse = await getDataFromUrl(doubleAuthUrl, loginResponse['token'], doubleAuthData);
+        console.log("Get questions: " + doubleAuthResponse['code']);
+
+        const question = Buffer.from(doubleAuthResponse["data"]["question"], 'base64').toString('utf-8');
+        console.log("Question posée = " + question);
+
+        const encodedResp = Buffer.from(responsesConfiguration[question]).toString('base64');
+        console.log("Reponse si trouvée = " + responsesConfiguration[question] + "*** encoded=" + encodedResp);
+
+        const propositions = doubleAuthResponse["data"]["propositions"];
+        for (const key in propositions) {
+            process.stdout.write(Buffer.from(propositions[key], 'base64').toString('utf-8') + ",");
         }
-        else (body['code'] == 250)
-        {
-                const body = await getDataFromUrl("https://api.ecoledirecte.com/v3/connexion/doubleauth.awp?verbe=get&v
-=4.53.4", token, "data={}" )
+        console.log("");
 
-                console.log("Get questions:" + body['code']);
+        const setQuestionUrl = "https://api.ecoledirecte.com/v3/connexion/doubleauth.awp?verbe=post&v=4.53.4";
+        const setQuestionData = `data={
+            "choix": "${encodedResp}"
+        }`;
 
-                //console.log(body);
-                question = body["data"]["question"]
-                var buf = Buffer.from(question, 'base64').toString('utf-8');
-                console.log("Question posée=" + buf);
-                var encodedResp = Buffer.from(responsesConfiguration[buf]).toString('base64');
-                console.log("Reponse si trouvée=" + responsesConfiguration[buf] + "*** encoded="+encodedResp)
+        const setQuestionResponse = await getDataFromUrl(setQuestionUrl, loginResponse['token'], setQuestionData);
+        console.log("set question: " + setQuestionResponse['code']);
 
-                let propositions = body["data"]["propositions"]
-                for (key in propositions)
-                {
-                        process.stdout.write(Buffer.from(propositions[key], 'base64').toString('utf-8') + ",");
-                };
-                console.log("")
-                {
-                        const body = await getDataFromUrl("https://api.ecoledirecte.com/v3/connexion/doubleauth.awp?ver
-be=post&v=4.53.4", token,  "data={\n\"choix\": \"" + encodedResp + "\"\n}" )
+        if (setQuestionResponse['code'] === 200) {
+            const cn = setQuestionResponse['data']['cn'];
+            const cv = setQuestionResponse['data']['cv'];
 
-                        console.log("set question:" + body['code']);
-                        const cn = body['data']['cn']
-                        const cv = body['data']['cv']
+            const loginAfterQuestionUrl = "https://api.ecoledirecte.com/v3/login.awp?v=4.53.4";
+            const loginAfterQuestionData = `data={
+                "uuid": "",
+                "identifiant": "${encodedUser}",
+                "motdepasse": "${encodedPass}",
+                "isReLogin": false,
+                "cn": "${cn}",
+                "cv": "${cv}",
+                "fa": [{
+                    "cn": "${cn}",
+                    "cv": "${cv}"
+                }]
+            }`;
 
-                        if (body['code'] == 200)
-                        {
-                                const body = await getDataFromUrl("https://api.ecoledirecte.com/v3/login.awp?v=4.53.4",
- token,
-                                        "data={\n    \"uuid\": \"\",\n    \"identifiant\": \"" + encodedUser + "\",\n
-  \"motdepasse\": \"" + encodedPass + "\",\n    \"isReLogin\": false,\n"
-                                                + "    \"cn\":\"" + cn + "\",\n    \"cv\":\""  + cv + "\",\n"
-                                                + "    \"fa\": [\n    {\n        \"cn\":\"" + cn +  "\",\n        \"cv\
-":\""  + cv + "\"\n        }\n    ]\n}")
+            const loginAfterQuestionResponse = await getDataFromUrl(loginAfterQuestionUrl, loginResponse['token'], loginAfterQuestionData);
+            console.log("login après question: " + loginAfterQuestionResponse['code']);
 
-                                console.log("login apres question:" + body['code']);
-                                token = body['token'];
-                                if (body['code'] == 200)
-                                {
-//                                      console.log(body['data']['accounts']['0']['profile']['eleves']['0'])
-                                        account = body['data']['accounts']['0']['profile']['eleves']['0'];
-                                        //console.log(account);
-                                }
-
-                        }
-                }
+            if (loginAfterQuestionResponse['code'] === 200) {
+                token = loginAfterQuestionResponse['token'];
+                account = loginAfterQuestionResponse['data']['accounts']['0']['profile']['eleves']['0'];
+            }
         }
-
+    }
+    if (!account) {
+        const message = `Erreur login`;
+        console.log(message);
+        throw new Error(message);
+    }
+    return [account, token];
 }
 
-async function checkIfNew() {
+function encodeString(str) {
+    return str.replace(/[\u00A0-\u9999<>\&]/gim, function(i) {
+        return '&#' + i.charCodeAt(0) + ';';
+    });
+}
 
-        console.log("check new");
-        oldNote = retrieveAllNotes()
-        oldComp = retrieveAllComp()
-        console.log("check new: get all OK");
+async function checkIfNew(account, token) {
+    console.log("check new");
+    console.log("check new: get all OK, ID=" + account.id + " token=" + token);
 
-        const Values = await getNewNotes(account.id, token);
+    const oldNote = retrieveAllNotes();
+    const oldComp = retrieveAllComp();
 
-        NewNotes = Values[0]
-        NewCompetences = Values[1]
+    const [newNotes, newCompetences] = await getNewNotes(account.id, token);
 
-        console.log("check new: get all2 OK");
-        //console.log("Notes=" + NewNotes);
+    console.log("check new: get all2 OK");
 
-        if (!isDeepStrictEqual(oldNote, NewNotes)) {
-                console.log("check new: Start find different note");
-                let bb = findDifferent(oldNote, NewNotes)
-                if (bb.length > 4) {
-                        console.log("check new: plus de 4 notes");
-                        let matieres = "Plus de 4 notes: "
-                        for (let i = 0; i < bb.length; i++) {
-                                let element = bb[i]
-                                console.log(element);
-                                matieres += element.matiere + " ";
-                        }
-                        notif.send(matieres);
-                } else {
-                        for (let i = 0; i < bb.length; i++) {
-                                let element = bb[i]
-                                console.log(element);
-                                notif.send("Une nouvelle note est arrivee", element.matiere + " " + element.type + " "
-+ element.note + "/" + element.noteSur)
-                        }
-                }
-                console.log("check new: find note ended");
-                saveNotes(NewNotes)
+    checkAndNotify(oldNote, newNotes, "note");
+    checkAndNotify(oldComp, newCompetences, "competence");
+}
+
+function checkAndNotify(oldData, newData, type) {
+    const differences = findDifferent(oldData, newData);
+
+    if (differences.length === 0) {
+        console.log(`Pas de nouvelle ${type}`);
+        return;
+    }
+
+    console.log(`check new: Start find different ${type}`);
+    const threshold = 4;
+    if (differences.length > threshold) {
+        console.log(`check new: plus de ${threshold} ${type}s`);
+        const dataString = differences.map(element => element.matiere).join(" ");
+        notif.send(`Plus de ${threshold} ${type}s: ${dataString}`);
+    } else {
+        for (const element of differences) {
+            console.log(element);
+            notif.send(`Une nouvelle ${type} est arrivée`, formatNotificationMessage(element, type));
         }
-        else
-        {
-                console.log("Pas de nouvelle note");
-        }
+    }
+    console.log(`check new: find ${type} ended`);
 
-        if (!isDeepStrictEqual(oldComp, NewCompetences)) {
-                console.log("check new: Start find different competence");
-                let bb = findDifferent(oldComp, NewCompetences)
-                if (bb.length > 4) {
-                        console.log("check new: plus de 4 competences");
-                        let competences = "Plus de 4 competences: "
-                        for (let i = 0; i < bb.length; i++) {
-                                let element = bb[i]
-                                console.log(element);
-                                competences += element.matiere + " ";
-                        }
-                        notif.send(competences);
-                } else {
-                        for (let i = 0; i < bb.length; i++) {
-                                let element = bb[i]
-                                console.log(element);
-                                notif.send("Une nouvelle competence est arrivee", element.matiere + " " + element.nom +
- " " + element.type)
-                        }
-                }
-                console.log("check new: find competence ended");
-                saveComp(NewCompetences)
-        }
-        else
-        {
-                console.log("Pas de nouvelle competence");
-        }
+    if (type === "note") {
+        saveNotes(newData);
+    } else if (type === "competence") {
+        saveComp(newData);
+    }
+}
+
+function formatNotificationMessage(element, type) {
+    if (type === "note") {
+        return `${element.matiere} ${element.type} ${element.note}/${element.noteSur}`;
+    } else if (type === "competence") {
+        return `${element.matiere} ${element.nom} ${element.type}`;
+    }
 }
 
 function saveNotes(allNotes) {
@@ -273,48 +273,44 @@ function findDifferent(old, newnotes) {
 }
 
 async function getNewNotes(id, token) {
+    const url = `https://api.ecoledirecte.com/v3/eleves/${id}/notes.awp?verbe=get&v=4.53.4`;
+    const data = "data={\n    \"anneeScolaire\": \"\"\n}";
 
-        const body = await getDataFromUrl("https://api.ecoledirecte.com/v3/eleves/" + id + "/notes.awp?verbe=get&v=4.53
-.4", token,   "data={\n    \"anneeScolaire\": \"\"\n}" )
+    const body = await getDataFromUrl(url, token, data);
+    console.log("Get note: " + body['code']);
 
-        console.log("Get note:" + body['code']);
-        let notes = body['data']['notes']
-        //console.log(notes)
+    const allNotes = [];
+    const allCompetences = [];
 
-        let allNotes = []
-        let allCompetences = []
-        notes.forEach(n => {
-                if (n.valeur != "") {
-                        let data = {
-                                id: n.id,
-                                nom: n.devoir,
-                                matiere: n.libelleMatiere,
-                                type: n.typeDevoir,
-                                coef: n.coef,
-                                note: n.valeur,
-                                noteSur: n.noteSur,
-                                date: n.date,
-                                MClasse: n.moyenneClasse,
-                                MinClasse: n.minClasse,
-                                MaxClasse: n.maxClasse
-                        }
-                        allNotes.push(data)
+    body['data']['notes'].forEach(n => {
+        const commonData = {
+            id: n.id,
+            nom: n.devoir,
+            matiere: n.libelleMatiere,
+            type: n.typeDevoir,
+            date: n.date
+        };
 
-                } else {
-                        let data = {
-                                id: n.id,
-                                nom: n.devoir,
-                                matiere: n.libelleMatiere,
-                                type: n.typeDevoir,
-                                date: n.date
-                        }
-                        allCompetences.push(data)
+        if (n.valeur !== "") {
+            const noteData = {
+                ...commonData,
+                coef: n.coef,
+                note: n.valeur,
+                noteSur: n.noteSur,
+                MClasse: n.moyenneClasse,
+                MinClasse: n.minClasse,
+                MaxClasse: n.maxClasse
+            };
+            allNotes.push(noteData);
+        } else {
+            allCompetences.push(commonData);
+        }
+    });
 
-                }
+    //Debug(allNotes); // Afficher les notes détaillées
+    // Debug(allCompetences); // Afficher les compétences
 
-        });
-        //console.log(allNotes)
-        return [allNotes, allCompetences]
+    return [allNotes, allCompetences];
 }
 
 function retrieveAllNotes() {
