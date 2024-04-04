@@ -7,7 +7,7 @@ module.exports = {
 
         const options = {
             method: 'POST',
-            url: 'https://ntfy.sh/TOPIC',
+            url: 'https://ntfy.sh/' + config.notifTopic,
             headers: {
                 'Content-Type': 'text/plain',
                 Title: title,
@@ -16,7 +16,7 @@ module.exports = {
             },
             data: msg
         };
-        
+
         axios.request(options).then(function (response) {
             console.log("Notifs sent with success !");
         }).catch(function (error) {
