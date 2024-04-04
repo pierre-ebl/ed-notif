@@ -1,9 +1,5 @@
-
 {
     "username": "TODO",
     "pass": "TODO",
-    "pushover": {
-        "token": "",
-        "user": "nik0"
-    }
+    "notifTopic" : "TODO"
 }
