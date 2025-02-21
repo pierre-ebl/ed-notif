@@ -1,0 +1,26 @@
+[
+    {
+        "question": "Quelle est votre ville de résidence ?",
+        "reponse": "PARIS"
+    },
+    {
+        "question": "Quel est votre code postal de résidence ?", 
+        "reponse": "01234"
+    },
+    {
+        "question": "Quel est le mois de naissance de",
+        "reponse": "janvier" 
+    },
+    {
+        "question": "Quel est le jour de naissance de",
+        "reponse": "01"
+    },
+    {
+        "question": "Quelle est l'année de naissance de", 
+        "reponse": "1999"
+    },
+    {
+        "question": "Quel est le niveau scolaire de",
+        "reponse": "03 - Troisième"
+    }
+]
